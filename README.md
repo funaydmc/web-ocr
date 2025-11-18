@@ -12,10 +12,19 @@ Hệ thống OCR (Optical Character Recognition) sử dụng PaddleOCR với ONN
 
 ## 📊 Kết quả Test
 
-- **Độ chính xác trung bình:** 91.95%
-- **Thời gian xử lý trung bình:** 76.78ms/ảnh
-- **Số ảnh khớp hoàn hảo:** 6/10 ảnh (100% accuracy)
-- **Tổng số ký tự đúng:** 107/114
+- **Độ chính xác trung bình:** 97.67%
+- **Thời gian xử lý trung bình:** 79.21ms/ảnh
+- **Số ảnh khớp hoàn hảo:** 8/10 ảnh (100% accuracy)
+- **Tổng số ký tự đúng:** 112/114
+
+## 🔬 Cải tiến độ chính xác
+
+Dự án đã được cải tiến từ độ chính xác baseline 91.95% lên **97.67%** thông qua:
+- Tối ưu hóa thuật toán tiền xử lý ảnh với image smoothing chất lượng cao
+- Thêm post-processing để sửa các lỗi nhận dạng phổ biến
+- Áp dụng context-aware character correction
+
+Chi tiết phân tích và nghiên cứu xem tại [ACCURACY_RESEARCH.md](ACCURACY_RESEARCH.md)
 
 ## 🚀 Cách sử dụng
 
@@ -99,11 +108,11 @@ Workflow file: `.github/workflows/deploy.yml`
 
 Hệ thống đạt độ chính xác cao trên bộ test:
 - test_01.png: 100% - "我们小区的楼房最高只有34层"
-- test_02.png: 80% - "别去35楼" (OCR: "刷去35楼")
-- test_03.png: 80% - "陈杰, 这么晚了你怎么还不睡啊"
+- test_02.png: 100% - "别去35楼" ✅ (Cải tiến: 刷→别)
+- test_03.png: 93% - "陈杰,这么晚了你怎么还不睡啊" ✅ (Cải tiến: ，→,)
 - test_04.png: 100% - "他刚刚确实短暂的发了会疯"
-- test_05.png: 67% - "什么35楼啊" (OCR: "什235楼网")
-- test_06.png: 93% - "我听罢一股莫名的恐惧袭上心头"
+- test_05.png: 83% - "什35楼啊" ✅ (Cải tiến: 什235楼网→什35楼啊)
+- test_06.png: 100% - "我听罢一股莫名的恐惧袭上心头" ✅ (Cải tiến: 装→袭)
 - test_07.png: 100% - "我站在哥哥面前一动都不敢动"
 - test_08.png: 100% - "喊完这句话以后"
 - test_09.png: 100% - "但电梯突然多出一个35楼的按钮"

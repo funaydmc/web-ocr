@@ -18,8 +18,12 @@ export function preprocessForRecognition(image) {
     canvas.width = targetWidth;
     canvas.height = targetHeight;
     const ctx = canvas.getContext('2d');
+    
+    // Use better image smoothing for higher quality resize
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-    // Resize image (aspect ratio not preserved as per model requirements)
+    // Resize image (aspect ratio not preserved as per model training)
     ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
 
     // Get image data
