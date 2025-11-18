@@ -15,6 +15,13 @@
 
         <main>
             <section class="controls">
+                <div class="model-selector-wrapper">
+                    <label for="modelSelect">OCR Model:</label>
+                    <select id="modelSelect" class="model-select">
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+                
                 <div class="file-input-wrapper">
                     <label for="imageInput" class="btn btn-primary">
                         📁 Choose Image
@@ -25,6 +32,10 @@
                 
                 <button id="testAllBtn" class="btn btn-secondary">
                     🧪 Test All Images
+                </button>
+                
+                <button id="compareModelsBtn" class="btn btn-info">
+                    📊 Compare All Models
                 </button>
             </section>
 
@@ -64,6 +75,11 @@
                 <h2>📋 Test Results Summary</h2>
                 <div id="testResults" class="test-results-grid"></div>
                 <div id="overallStats" class="overall-stats"></div>
+            </section>
+
+            <section class="model-comparison-section" id="modelComparisonSection" style="display: none;">
+                <h2>📊 Model Comparison</h2>
+                <div id="modelComparison" class="model-comparison-grid"></div>
             </section>
 
             <section class="loading-section" id="loadingSection" style="display: none;">

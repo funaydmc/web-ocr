@@ -3,13 +3,16 @@
  * Implements PaddleOCR recognition with CTC decoding
  */
 
+import { getModelConfig } from './models-config.js';
+
 /**
  * Load character dictionary from file
+ * @param {string} dictionaryPath - Path to dictionary file
  * @returns {Promise<string[]>} Array of characters (index 0 is blank, index 1+ are dictionary characters)
  */
-export async function loadCharacterDictionary() {
+export async function loadCharacterDictionary(dictionaryPath = 'static/models/ppocr_keys_v1.txt') {
     try {
-        const response = await fetch('static/models/ppocr_keys_v1.txt');
+        const response = await fetch(dictionaryPath);
         const text = await response.text();
         
         // Split by lines and filter empty lines
@@ -24,12 +27,38 @@ export async function loadCharacterDictionary() {
 }
 
 /**
- * Load ONNX models
+ * Load ONNX model
+ * @param {string} modelId - Model identifier from models-config.js
+ * @returns {Promise<InferenceSession>} Loaded model
+ */
+export async function loadModel(modelId) {
+    try {
+        const config = getModelConfig(modelId);
+        if (!config) {
+            throw new Error(`Model config not found for: ${modelId}`);
+        }
+        
+        // Load recognition model
+        const model = await ort.InferenceSession.create(config.modelPath, {
+            executionProviders: ['wasm'],
+        });
+        
+        console.log(`Model ${config.name} loaded successfully from ${config.modelPath}`);
+        
+        return model;
+    } catch (error) {
+        console.error('Error loading model:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load ONNX models (legacy function for backward compatibility)
  * @returns {Promise<{recModel: InferenceSession}>} Loaded models
  */
 export async function loadModels() {
     try {
-        // Load recognition model
+        // Load default recognition model
         const recModel = await ort.InferenceSession.create('static/models/rec_model.onnx', {
             executionProviders: ['wasm'],
         });

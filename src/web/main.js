@@ -3,13 +3,16 @@
  */
 
 import { preprocessForRecognition, drawImageOnCanvas } from '../lib/preprocess/index.js';
-import { loadCharacterDictionary, loadModels, recognizeText, calculateAccuracy } from '../lib/ocr/index.js';
+import { loadCharacterDictionary, loadModel, loadModels, recognizeText, calculateAccuracy } from '../lib/ocr/index.js';
+import { getAvailableModels, getModelConfig, getDefaultModelId } from '../lib/ocr/models-config.js';
+import { recordTestResult, getModelStatistics, getAllModelStatistics, compareModels, clearModelStatistics } from '../lib/ocr/statistics.js';
 
 // Global state
-let ocrModel = null;
-let dictionary = null;
+let loadedModels = {}; // Store multiple loaded models
+let dictionaries = {}; // Store dictionaries for each model
 let groundTruthData = null;
 let currentImageName = null;
+let currentModelId = null;
 
 /**
  * Escape HTML to prevent XSS
@@ -27,16 +30,15 @@ async function init() {
     showLoading('Initializing OCR system...');
     
     try {
-        // Load character dictionary
-        console.log('Loading character dictionary...');
-        dictionary = await loadCharacterDictionary();
-        console.log(`Dictionary loaded: ${dictionary.length} characters`);
+        // Populate model selector
+        populateModelSelector();
         
-        // Load ONNX models
-        console.log('Loading ONNX models...');
-        const models = await loadModels();
-        ocrModel = models.recModel;
-        console.log('Models loaded successfully');
+        // Set default model
+        currentModelId = getDefaultModelId();
+        document.getElementById('modelSelect').value = currentModelId;
+        
+        // Load default model and dictionary
+        await loadCurrentModel();
         
         // Load ground truth data
         console.log('Loading ground truth data...');
@@ -57,6 +59,64 @@ async function init() {
 }
 
 /**
+ * Populate model selector dropdown
+ */
+function populateModelSelector() {
+    const modelSelect = document.getElementById('modelSelect');
+    const availableModels = getAvailableModels();
+    
+    modelSelect.innerHTML = '';
+    
+    availableModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = `${model.name} - ${model.description}`;
+        modelSelect.appendChild(option);
+    });
+}
+
+/**
+ * Load current model and its dictionary
+ */
+async function loadCurrentModel() {
+    const modelId = currentModelId;
+    const config = getModelConfig(modelId);
+    
+    if (!config) {
+        throw new Error(`Model configuration not found for: ${modelId}`);
+    }
+    
+    console.log(`Loading model: ${config.name}...`);
+    
+    // Load dictionary if not already loaded
+    if (!dictionaries[modelId]) {
+        console.log(`Loading character dictionary for ${modelId}...`);
+        dictionaries[modelId] = await loadCharacterDictionary(config.dictionaryPath);
+        console.log(`Dictionary loaded: ${dictionaries[modelId].length} characters`);
+    }
+    
+    // Load model if not already loaded
+    if (!loadedModels[modelId]) {
+        console.log(`Loading ONNX model: ${config.modelPath}...`);
+        try {
+            loadedModels[modelId] = await loadModel(modelId);
+            console.log(`Model ${config.name} loaded successfully`);
+        } catch (error) {
+            console.warn(`Failed to load model ${modelId}:`, error);
+            // If model file doesn't exist, fall back to default model
+            if (modelId !== 'paddleocr_v1') {
+                console.log('Falling back to default model...');
+                currentModelId = 'paddleocr_v1';
+                document.getElementById('modelSelect').value = currentModelId;
+                await loadCurrentModel();
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
+/**
  * Set up event listeners
  */
 function setupEventListeners() {
@@ -67,6 +127,49 @@ function setupEventListeners() {
     // Test all button
     const testAllBtn = document.getElementById('testAllBtn');
     testAllBtn.addEventListener('click', handleTestAll);
+    
+    // Model selector change
+    const modelSelect = document.getElementById('modelSelect');
+    modelSelect.addEventListener('change', handleModelChange);
+    
+    // Compare models button
+    const compareModelsBtn = document.getElementById('compareModelsBtn');
+    compareModelsBtn.addEventListener('click', handleCompareModels);
+}
+
+/**
+ * Handle model selection change
+ */
+async function handleModelChange(event) {
+    const newModelId = event.target.value;
+    
+    if (newModelId === currentModelId) {
+        return;
+    }
+    
+    showLoading(`Switching to ${getModelConfig(newModelId).name}...`);
+    
+    try {
+        currentModelId = newModelId;
+        await loadCurrentModel();
+        hideLoading();
+        console.log(`Switched to model: ${currentModelId}`);
+        
+        // Re-process current image if any
+        if (currentImageName) {
+            const imageInput = document.getElementById('imageInput');
+            if (imageInput.files[0]) {
+                const image = await loadImage(imageInput.files[0]);
+                await processImage(image, currentImageName);
+            }
+        }
+    } catch (error) {
+        console.error('Error changing model:', error);
+        hideLoading();
+        alert('Failed to load model: ' + error.message);
+        // Revert selection
+        event.target.value = currentModelId;
+    }
 }
 
 /**
@@ -111,7 +214,7 @@ async function processImage(image, imageName) {
         const canvas = document.getElementById('imageCanvas');
         drawImageOnCanvas(image, canvas);
         document.getElementById('imageInfo').textContent = 
-            `Size: ${image.width}x${image.height} pixels`;
+            `Size: ${image.width}x${image.height} pixels | Model: ${getModelConfig(currentModelId).name}`;
         
         // Start timing
         const startTime = performance.now();
@@ -120,9 +223,11 @@ async function processImage(image, imageName) {
         console.log('Preprocessing image...');
         const inputTensor = preprocessForRecognition(image);
         
-        // Perform OCR
-        console.log('Performing OCR...');
-        const ocrText = await recognizeText(ocrModel, inputTensor, dictionary);
+        // Perform OCR with current model
+        console.log(`Performing OCR with model: ${currentModelId}...`);
+        const model = loadedModels[currentModelId];
+        const dictionary = dictionaries[currentModelId];
+        const ocrText = await recognizeText(model, inputTensor, dictionary);
         
         // End timing
         const endTime = performance.now();
@@ -237,7 +342,9 @@ async function handleTestAll() {
             
             // Preprocess and recognize
             const inputTensor = preprocessForRecognition(img);
-            const ocrText = await recognizeText(ocrModel, inputTensor, dictionary);
+            const model = loadedModels[currentModelId];
+            const dictionary = dictionaries[currentModelId];
+            const ocrText = await recognizeText(model, inputTensor, dictionary);
             
             // End timing
             const endTime = performance.now();
@@ -246,13 +353,18 @@ async function handleTestAll() {
             // Calculate accuracy
             const accuracy = calculateAccuracy(ocrText, testData.ground_truth_text);
             
-            results.push({
+            const result = {
                 fileName: testData.file_name,
                 ocrText: ocrText,
                 groundTruth: testData.ground_truth_text,
                 accuracy: accuracy,
                 processingTime: processingTime
-            });
+            };
+            
+            results.push(result);
+            
+            // Record statistics for current model
+            recordTestResult(currentModelId, result);
             
             console.log(`${testData.file_name}: ${accuracy.accuracy}% (${processingTime}ms)`);
         }
@@ -295,6 +407,9 @@ function displayTestResults(results) {
     // Show section
     testResultsSection.style.display = 'block';
     
+    // Get current model config
+    const modelConfig = getModelConfig(currentModelId);
+    
     // Generate result cards
     let html = '';
     for (const result of results) {
@@ -325,7 +440,7 @@ function displayTestResults(results) {
     const perfectMatches = results.filter(r => r.accuracy.identical).length;
     
     overallStatsDiv.innerHTML = `
-        <h3>📊 Overall Statistics</h3>
+        <h3>📊 Overall Statistics - ${escapeHtml(modelConfig.name)}</h3>
         <div class="stats-grid">
             <div class="stat-item">
                 <div class="stat-value">${avgAccuracy.toFixed(2)}%</div>
@@ -345,6 +460,138 @@ function displayTestResults(results) {
             </div>
         </div>
     `;
+}
+
+/**
+ * Handle compare models button
+ */
+async function handleCompareModels() {
+    if (!groundTruthData || groundTruthData.length === 0) {
+        alert('No test data available');
+        return;
+    }
+    
+    showLoading('Comparing all available models...');
+    
+    const availableModels = getAvailableModels();
+    const comparisonResults = [];
+    
+    try {
+        for (const modelConfig of availableModels) {
+            const modelId = modelConfig.id;
+            console.log(`Testing model: ${modelConfig.name}...`);
+            
+            // Load model and dictionary if not already loaded
+            try {
+                if (!loadedModels[modelId]) {
+                    loadedModels[modelId] = await loadModel(modelId);
+                }
+                if (!dictionaries[modelId]) {
+                    dictionaries[modelId] = await loadCharacterDictionary(modelConfig.dictionaryPath);
+                }
+            } catch (error) {
+                console.warn(`Skipping model ${modelId} - not available:`, error);
+                continue;
+            }
+            
+            // Clear previous statistics for this model
+            clearModelStatistics(modelId);
+            
+            const modelResults = [];
+            
+            // Test all images with this model
+            for (let i = 0; i < groundTruthData.length; i++) {
+                const testData = groundTruthData[i];
+                const imagePath = `static/tests/${testData.file_name}`;
+                
+                const img = await loadImageFromURL(imagePath);
+                
+                const startTime = performance.now();
+                const inputTensor = preprocessForRecognition(img);
+                const ocrText = await recognizeText(loadedModels[modelId], inputTensor, dictionaries[modelId]);
+                const endTime = performance.now();
+                const processingTime = (endTime - startTime).toFixed(2);
+                
+                const accuracy = calculateAccuracy(ocrText, testData.ground_truth_text);
+                
+                const result = {
+                    fileName: testData.file_name,
+                    ocrText: ocrText,
+                    groundTruth: testData.ground_truth_text,
+                    accuracy: accuracy,
+                    processingTime: processingTime
+                };
+                
+                modelResults.push(result);
+                recordTestResult(modelId, result);
+            }
+            
+            const stats = getModelStatistics(modelId);
+            comparisonResults.push({
+                modelId: modelId,
+                modelName: modelConfig.name,
+                modelDescription: modelConfig.description,
+                stats: stats
+            });
+            
+            console.log(`${modelConfig.name}: ${stats.avgAccuracy}% accuracy, ${stats.avgProcessingTime}ms avg time`);
+        }
+        
+        // Display comparison results
+        displayModelComparison(comparisonResults);
+        
+        hideLoading();
+        
+        // Scroll to comparison section
+        document.getElementById('modelComparisonSection').scrollIntoView({ behavior: 'smooth' });
+        
+    } catch (error) {
+        console.error('Error during model comparison:', error);
+        hideLoading();
+        alert('Error during model comparison: ' + error.message);
+    }
+}
+
+/**
+ * Display model comparison results
+ */
+function displayModelComparison(comparisonResults) {
+    const comparisonSection = document.getElementById('modelComparisonSection');
+    const comparisonDiv = document.getElementById('modelComparison');
+    
+    // Show section
+    comparisonSection.style.display = 'block';
+    
+    // Sort by accuracy (descending)
+    comparisonResults.sort((a, b) => parseFloat(b.stats.avgAccuracy) - parseFloat(a.stats.avgAccuracy));
+    
+    let html = '<div class="comparison-table">';
+    html += '<table class="model-comparison-table">';
+    html += '<thead><tr>';
+    html += '<th>Rank</th>';
+    html += '<th>Model</th>';
+    html += '<th>Avg Accuracy</th>';
+    html += '<th>Avg Time (ms)</th>';
+    html += '<th>Perfect Matches</th>';
+    html += '<th>Total Tests</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+    
+    comparisonResults.forEach((result, index) => {
+        const rankClass = index === 0 ? 'rank-best' : '';
+        html += `<tr class="${rankClass}">`;
+        html += `<td>${index + 1}</td>`;
+        html += `<td><strong>${escapeHtml(result.modelName)}</strong><br><small>${escapeHtml(result.modelDescription)}</small></td>`;
+        html += `<td><span class="accuracy-badge">${result.stats.avgAccuracy}%</span></td>`;
+        html += `<td>${result.stats.avgProcessingTime}ms</td>`;
+        html += `<td>${result.stats.perfectMatches} / ${result.stats.totalTests}</td>`;
+        html += `<td>${result.stats.totalTests}</td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    
+    comparisonDiv.innerHTML = html;
 }
 
 /**
