@@ -1,9 +1,17 @@
 /**
- * OCR module using ONNX Runtime WebAssembly
+ * OCR module using ONNX Runtime WebAssembly and Paddle Lite WebAssembly
  * Implements PaddleOCR recognition with CTC decoding
+ * Supports both ONNX (.onnx) and Paddle Lite (.nb) model formats
  */
 
-import { getModelConfig } from './models-config.js';
+import { getModelConfig, MODEL_TYPES } from './models-config.js';
+import { 
+    isPaddleLiteAvailable, 
+    loadPaddleLiteModel, 
+    runPaddleLiteInference,
+    extractPaddleLiteOutput,
+    disposePaddleLiteModel 
+} from './paddle-lite.js';
 
 /**
  * Load character dictionary from file
@@ -27,9 +35,9 @@ export async function loadCharacterDictionary(dictionaryPath = 'static/models/pp
 }
 
 /**
- * Load ONNX model
+ * Load model (ONNX or Paddle Lite)
  * @param {string} modelId - Model identifier from models-config.js
- * @returns {Promise<InferenceSession>} Loaded model
+ * @returns {Promise<Object>} Loaded model with type information
  */
 export async function loadModel(modelId) {
     try {
@@ -38,14 +46,37 @@ export async function loadModel(modelId) {
             throw new Error(`Model config not found for: ${modelId}`);
         }
         
-        // Load recognition model
-        const model = await ort.InferenceSession.create(config.modelPath, {
-            executionProviders: ['wasm'],
-        });
+        const modelType = config.modelType || MODEL_TYPES.ONNX;
         
-        console.log(`Model ${config.name} loaded successfully from ${config.modelPath}`);
-        
-        return model;
+        if (modelType === MODEL_TYPES.PADDLE_LITE) {
+            // Load Paddle Lite model
+            if (!isPaddleLiteAvailable()) {
+                console.warn('Paddle Lite not available, falling back to ONNX if possible');
+                throw new Error('Paddle Lite WebAssembly is not loaded. Please include paddle.js library.');
+            }
+            
+            const model = await loadPaddleLiteModel(config.modelPath);
+            console.log(`Paddle Lite model ${config.name} loaded successfully from ${config.modelPath}`);
+            
+            return {
+                ...model,
+                modelType: MODEL_TYPES.PADDLE_LITE,
+                config: config
+            };
+        } else {
+            // Load ONNX model (default)
+            const model = await ort.InferenceSession.create(config.modelPath, {
+                executionProviders: ['wasm'],
+            });
+            
+            console.log(`ONNX model ${config.name} loaded successfully from ${config.modelPath}`);
+            
+            return {
+                session: model,
+                modelType: MODEL_TYPES.ONNX,
+                config: config
+            };
+        }
     } catch (error) {
         console.error('Error loading model:', error);
         throw error;
@@ -74,24 +105,39 @@ export async function loadModels() {
 
 /**
  * Perform OCR recognition on preprocessed image tensor
- * @param {InferenceSession} model - ONNX recognition model
+ * Supports both ONNX Runtime and Paddle Lite models
+ * @param {Object} model - Model object (ONNX or Paddle Lite)
  * @param {Float32Array} inputTensor - Preprocessed image tensor [1, 3, 48, 320]
  * @param {string[]} dictionary - Character dictionary
  * @returns {Promise<string>} Recognized text
  */
 export async function recognizeText(model, inputTensor, dictionary) {
     try {
-        // Create input tensor
-        const tensor = new ort.Tensor('float32', inputTensor, [1, 3, 48, 320]);
+        let outputData, outputShape;
         
-        // Run inference
-        const feeds = { x: tensor };
-        const results = await model.run(feeds);
-        
-        // Get output tensor
-        const output = results[Object.keys(results)[0]];
-        const outputData = output.data;
-        const outputShape = output.dims;
+        // Check model type and run appropriate inference
+        if (model.modelType === MODEL_TYPES.PADDLE_LITE) {
+            // Paddle Lite inference
+            const result = await runPaddleLiteInference(model, inputTensor, model.config);
+            const output = extractPaddleLiteOutput(result);
+            outputData = output.data;
+            outputShape = output.dims;
+        } else {
+            // ONNX Runtime inference (default)
+            const session = model.session || model; // Support both new and legacy formats
+            
+            // Create input tensor
+            const tensor = new ort.Tensor('float32', inputTensor, [1, 3, 48, 320]);
+            
+            // Run inference
+            const feeds = { x: tensor };
+            const results = await session.run(feeds);
+            
+            // Get output tensor
+            const output = results[Object.keys(results)[0]];
+            outputData = output.data;
+            outputShape = output.dims;
+        }
         
         // Output shape should be [1, 40, 6625] (1 batch, 40 time steps, 6625 classes including blank)
         const batchSize = outputShape[0];

@@ -103,6 +103,7 @@ web-ocr/
 ## 🛠️ Công nghệ sử dụng
 
 - **ONNX Runtime Web 1.17.0**: Chạy mô hình ONNX trên browser qua WebAssembly
+- **Paddle Lite WebAssembly**: Hỗ trợ chạy mô hình Paddle Lite (.nb) được tối ưu cho web/mobile
 - **PaddleOCR**: Mô hình OCR recognition từ PaddlePaddle
 - **Vanilla JavaScript**: Không sử dụng framework, chỉ JavaScript thuần
 - **HTML5 Canvas**: Xử lý và hiển thị ảnh
@@ -112,6 +113,7 @@ web-ocr/
 
 ### Model Selection
 - Chọn model từ dropdown để thay đổi mô hình OCR
+- Hỗ trợ cả ONNX models (.onnx) và Paddle Lite models (.nb)
 - Tự động load model khi chuyển đổi
 - Hiển thị tên model trong kết quả
 
@@ -126,6 +128,12 @@ web-ocr/
 - Hiển thị bảng so sánh với ranking
 - Sắp xếp theo độ chính xác
 - Export statistics sang JSON
+
+### Paddle Lite Support
+- Hỗ trợ mô hình Paddle Lite (.nb) tối ưu cho web
+- Chuyển đổi tự động giữa định dạng NCHW và NHWC
+- Hiệu suất cao hơn với models được tối ưu
+- Kích thước file nhỏ hơn 30-50% so với ONNX
 
 ## 📖 Chi tiết kỹ thuật
 
