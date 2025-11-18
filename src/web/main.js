@@ -12,6 +12,15 @@ let groundTruthData = null;
 let currentImageName = null;
 
 /**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
  * Initialize the application
  */
 async function init() {
@@ -146,7 +155,7 @@ async function processImage(image, imageName) {
  */
 function displayOCRResult(text, processingTime) {
     const resultDiv = document.getElementById('ocrResult');
-    resultDiv.innerHTML = `<p>${text || '<em>No text detected</em>'}</p>`;
+    resultDiv.textContent = text || 'No text detected';
     
     const timeDiv = document.getElementById('processingTime');
     timeDiv.textContent = `⏱️ Processing Time: ${processingTime}ms`;
@@ -158,9 +167,9 @@ function displayOCRResult(text, processingTime) {
 function displayGroundTruth(groundTruth) {
     const gtDiv = document.getElementById('groundTruth');
     if (groundTruth) {
-        gtDiv.innerHTML = `<p>${groundTruth}</p>`;
+        gtDiv.textContent = groundTruth;
     } else {
-        gtDiv.innerHTML = `<p class="placeholder">No ground truth available</p>`;
+        gtDiv.textContent = 'No ground truth available';
     }
 }
 
@@ -296,12 +305,12 @@ function displayTestResults(results) {
         
         html += `
             <div class="test-result-item ${statusClass}">
-                <h4>${result.fileName}</h4>
+                <h4>${escapeHtml(result.fileName)}</h4>
                 <div class="test-accuracy">${result.accuracy.accuracy}%</div>
                 <div class="test-time">⏱️ ${result.processingTime}ms</div>
                 <div class="test-text">
-                    <strong>OCR:</strong> ${result.ocrText}<br>
-                    <strong>Truth:</strong> ${result.groundTruth}
+                    <strong>OCR:</strong> ${escapeHtml(result.ocrText)}<br>
+                    <strong>Truth:</strong> ${escapeHtml(result.groundTruth)}
                 </div>
             </div>
         `;
