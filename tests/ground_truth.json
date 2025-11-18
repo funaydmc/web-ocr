@@ -1,0 +1,42 @@
+[
+  {
+    "file_name": "test_01.png",
+    "ground_truth_text": "我们小区的楼房最高只有34层"
+  },
+  {
+    "file_name": "test_02.png",
+    "ground_truth_text": "别去35楼"
+  },
+  {
+    "file_name": "test_03.png",
+    "ground_truth_text": "陈杰, 这么晚了你怎么还不睡啊"
+  },
+  {
+    "file_name": "test_04.png",
+    "ground_truth_text": "他刚刚确实短暂的发了会疯"
+  },
+  {
+    "file_name": "test_05.png",
+    "ground_truth_text": "什么35楼啊"
+  },
+  {
+    "file_name": "test_06.png",
+    "ground_truth_text": "我听罢一股莫名的恐惧袭上心头"
+  },
+  {
+    "file_name": "test_07.png",
+    "ground_truth_text": "我站在哥哥面前一动都不敢动"
+  },
+  {
+    "file_name": "test_08.png",
+    "ground_truth_text": "喊完这句话以后"
+  },
+  {
+    "file_name": "test_09.png",
+    "ground_truth_text": "但电梯突然多出一个35楼的按钮"
+  },
+  {
+    "file_name": "test_10.png",
+    "ground_truth_text": "我站在哥哥面前一动都不敢动"
+  }
+]
