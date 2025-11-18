@@ -316,14 +316,6 @@ When implementing this OCR system in any programming language:
 
 7. **Model Format**: ONNX models are platform-independent and can be used with various frameworks
 
-## 📚 Reference Implementation
-
-For a complete working example, see:
-- `paddle_ocr_final.py` - Full Python implementation
-- `demo.py` - Simplified Python demo
-
-These implementations demonstrate all the concepts described in this document.
-
 ## 🎯 Summary
 
 The OCR pipeline consists of:
