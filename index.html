@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web OCR - PaddleOCR with WebAssembly</title>
+    <link rel="stylesheet" href="src/web/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Web OCR System</h1>
+            <p>PaddleOCR with ONNX Runtime WebAssembly</p>
+        </header>
+
+        <main>
+            <section class="controls">
+                <div class="file-input-wrapper">
+                    <label for="imageInput" class="btn btn-primary">
+                        📁 Choose Image
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*">
+                    <span id="fileName">No file chosen</span>
+                </div>
+                
+                <button id="testAllBtn" class="btn btn-secondary">
+                    🧪 Test All Images
+                </button>
+            </section>
+
+            <section class="preview-section">
+                <div class="image-preview">
+                    <h3>Input Image</h3>
+                    <canvas id="imageCanvas"></canvas>
+                    <p id="imageInfo"></p>
+                </div>
+            </section>
+
+            <section class="results-section">
+                <div class="result-card">
+                    <h3>📊 OCR Results</h3>
+                    <div id="ocrResult" class="result-text">
+                        <p class="placeholder">Upload an image to see OCR results</p>
+                    </div>
+                    <div id="processingTime" class="processing-time"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>✅ Ground Truth</h3>
+                    <div id="groundTruth" class="result-text">
+                        <p class="placeholder">Ground truth will appear here</p>
+                    </div>
+                </div>
+
+                <div class="result-card accuracy-card">
+                    <h3>📈 Accuracy</h3>
+                    <div id="accuracy" class="accuracy-display">
+                        <p class="placeholder">Accuracy will be calculated here</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="test-results-section" id="testResultsSection" style="display: none;">
+                <h2>📋 Test Results Summary</h2>
+                <div id="testResults" class="test-results-grid"></div>
+                <div id="overallStats" class="overall-stats"></div>
+            </section>
+
+            <section class="loading-section" id="loadingSection" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p id="loadingText">Loading...</p>
+            </section>
+        </main>
+
+        <footer>
+            <p>Powered by ONNX Runtime WebAssembly | PaddleOCR Models</p>
+        </footer>
+    </div>
+
+    <script src="static/lib/onnxruntime-web/dist/ort.min.js"></script>
+    <script type="module" src="src/web/main.js"></script>
+</body>
+</html>
