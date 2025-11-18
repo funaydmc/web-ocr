@@ -442,6 +442,131 @@ footer {
     border-top: 1px solid #e0e0e0;
 }
 
+/* Model Test Section Styles */
+.model-test-section {
+    margin-bottom: 40px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.model-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+}
+
+.model-header h3 {
+    margin-bottom: 8px;
+    font-size: 1.4rem;
+}
+
+.model-description {
+    opacity: 0.9;
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+}
+
+.model-stats-summary {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.stat-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.accuracy-badge {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+.time-badge {
+    background: rgba(33, 150, 243, 0.3);
+}
+
+.perfect-badge {
+    background: rgba(255, 193, 7, 0.3);
+}
+
+.test-results-grid {
+    padding: 20px;
+    background: white;
+}
+
+/* Model Comparison Summary */
+.model-comparison-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.summary-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.summary-item.rank-best {
+    border-color: #ffd700;
+    background: linear-gradient(135deg, #fff9e6 0%, #fffbf0 100%);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.summary-rank {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #667eea;
+    min-width: 50px;
+    text-align: center;
+}
+
+.summary-item.rank-best .summary-rank {
+    color: #ffd700;
+}
+
+.summary-content {
+    flex: 1;
+}
+
+.summary-content strong {
+    display: block;
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.summary-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 0.9rem;
+    color: #666;
+    flex-wrap: wrap;
+}
+
+.summary-stats span {
+    padding: 4px 12px;
+    background: #f0f0f0;
+    border-radius: 12px;
+}
+
 @media (max-width: 768px) {
     header h1 {
         font-size: 1.8rem;

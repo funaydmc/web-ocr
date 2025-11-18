@@ -58,7 +58,29 @@ Hệ thống hỗ trợ nhiều phiên bản mô hình PaddleOCR với đặc đ
 
 ## 🚀 Cách sử dụng
 
-### 1. Chạy local
+### 1. Setup Nhanh với Script Tự Động (Khuyến nghị) ⭐
+
+**Windows:**
+```cmd
+setup_models.bat
+```
+
+**Linux/macOS:**
+```bash
+chmod +x setup_models.sh
+./setup_models.sh
+```
+
+Script sẽ tự động:
+- ✅ Cài đặt dependencies
+- ✅ Tải tất cả models (v2_mobile, v2_server, v3, v4)
+- ✅ Chuyển đổi sang ONNX
+- ✅ Hướng dẫn cập nhật config
+- ✅ Khởi động server
+
+📖 Xem chi tiết: [QUICK_SETUP.md](QUICK_SETUP.md)
+
+### 2. Chạy local (Basic)
 
 ```bash
 # Clone repository
@@ -71,20 +93,20 @@ python3 -m http.server 8000
 # Mở browser tại http://localhost:8000
 ```
 
-### 2. Sử dụng GitHub Pages
+### 3. Sử dụng GitHub Pages
 
 Website được deploy tự động lên GitHub Pages khi có thay đổi trên nhánh `main`.
 
 URL: `https://funaydmc.github.io/web-ocr/`
 
-### 3. Sử dụng giao diện
+### 4. Sử dụng giao diện
 
-1. **Chọn Model**: Chọn mô hình OCR từ dropdown (hiện tại có PaddleOCR v1)
+1. **Chọn Model**: Chọn mô hình OCR từ dropdown (hiển thị benchmark thực)
 2. **Upload Ảnh**: Click "Choose Image" để chọn ảnh cần OCR
 3. **Test All**: Click "Test All Images" để test trên tất cả ảnh test
 4. **Compare Models**: Click "Compare All Models" để so sánh hiệu suất các mô hình
 
-### 4. Tải và triển khai thêm các mô hình PaddleOCR
+### 5. Tải và triển khai thêm các mô hình PaddleOCR
 
 Hệ thống hỗ trợ nhiều phiên bản PaddleOCR models:
 

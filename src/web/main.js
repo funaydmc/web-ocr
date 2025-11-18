@@ -13,6 +13,7 @@ let dictionaries = {}; // Store dictionaries for each model
 let groundTruthData = null;
 let currentImageName = null;
 let currentModelId = null;
+let modelBenchmarks = {}; // Store benchmark results for each model (accuracy, time)
 
 /**
  * Escape HTML to prevent XSS
@@ -30,21 +31,24 @@ async function init() {
     showLoading('Initializing OCR system...');
     
     try {
-        // Populate model selector
-        populateModelSelector();
-        
-        // Set default model
-        currentModelId = getDefaultModelId();
-        document.getElementById('modelSelect').value = currentModelId;
-        
-        // Load default model and dictionary
-        await loadCurrentModel();
-        
-        // Load ground truth data
+        // Load ground truth data first (needed for benchmarking)
         console.log('Loading ground truth data...');
         const response = await fetch('static/tests/ground_truth.json');
         groundTruthData = await response.json();
         console.log('Ground truth data loaded');
+        
+        // Set default model
+        currentModelId = getDefaultModelId();
+        
+        // Load default model and dictionary
+        await loadCurrentModel();
+        
+        // Run benchmarks for available models
+        await runModelBenchmarks();
+        
+        // Populate model selector with benchmark results
+        populateModelSelector();
+        document.getElementById('modelSelect').value = currentModelId;
         
         // Set up event listeners
         setupEventListeners();
@@ -56,6 +60,79 @@ async function init() {
         hideLoading();
         alert('Failed to initialize OCR system: ' + error.message);
     }
+}
+
+/**
+ * Run benchmarks for all available models
+ * Tests each model with real test data and stores results
+ */
+async function runModelBenchmarks() {
+    console.log('Running model benchmarks...');
+    
+    const availableModels = getAvailableModels(true).filter(model => model.available === true);
+    
+    // Use a subset of test images for quick benchmarking (first 3 images)
+    const benchmarkImages = groundTruthData.slice(0, Math.min(3, groundTruthData.length));
+    
+    for (const modelConfig of availableModels) {
+        const modelId = modelConfig.id;
+        
+        try {
+            // Load model and dictionary if not already loaded
+            if (!loadedModels[modelId]) {
+                loadedModels[modelId] = await loadModel(modelId);
+            }
+            if (!dictionaries[modelId]) {
+                dictionaries[modelId] = await loadCharacterDictionary(modelConfig.dictionaryPath);
+            }
+            
+            let totalAccuracy = 0;
+            let totalTime = 0;
+            let successfulTests = 0;
+            
+            // Test with benchmark images
+            for (const testData of benchmarkImages) {
+                try {
+                    const imagePath = `static/tests/${testData.file_name}`;
+                    const img = await loadImageFromURL(imagePath);
+                    
+                    const startTime = performance.now();
+                    const inputTensor = preprocessForRecognition(img);
+                    const ocrText = await recognizeText(loadedModels[modelId], inputTensor, dictionaries[modelId]);
+                    const endTime = performance.now();
+                    
+                    const processingTime = endTime - startTime;
+                    const accuracy = calculateAccuracy(ocrText, testData.ground_truth_text);
+                    
+                    totalAccuracy += parseFloat(accuracy.accuracy);
+                    totalTime += processingTime;
+                    successfulTests++;
+                } catch (error) {
+                    console.warn(`Benchmark failed for ${modelId} on ${testData.file_name}:`, error);
+                }
+            }
+            
+            if (successfulTests > 0) {
+                modelBenchmarks[modelId] = {
+                    avgAccuracy: (totalAccuracy / successfulTests).toFixed(2),
+                    avgTime: (totalTime / successfulTests).toFixed(0),
+                    tested: true
+                };
+                console.log(`Benchmark for ${modelConfig.name}: ${modelBenchmarks[modelId].avgAccuracy}% accuracy, ${modelBenchmarks[modelId].avgTime}ms`);
+            } else {
+                modelBenchmarks[modelId] = {
+                    tested: false
+                };
+            }
+        } catch (error) {
+            console.warn(`Failed to benchmark model ${modelId}:`, error);
+            modelBenchmarks[modelId] = {
+                tested: false
+            };
+        }
+    }
+    
+    console.log('Model benchmarks completed');
 }
 
 /**
@@ -79,7 +156,14 @@ function populateModelSelector() {
             statusLabel = '📥 ';
         }
         
-        option.textContent = `${statusLabel}${model.name} - ${model.description}`;
+        // Add benchmark results if available
+        let benchmarkInfo = '';
+        if (modelBenchmarks[model.id] && modelBenchmarks[model.id].tested) {
+            const bench = modelBenchmarks[model.id];
+            benchmarkInfo = ` [${bench.avgAccuracy}% | ${bench.avgTime}ms]`;
+        }
+        
+        option.textContent = `${statusLabel}${model.name}${benchmarkInfo} - ${model.description}`;
         
         // Disable option if model is not available
         if (model.available !== true) {
@@ -348,6 +432,7 @@ function findGroundTruth(imageName) {
 
 /**
  * Handle test all images button
+ * Tests all images with ALL available models and displays results sorted by accuracy
  */
 async function handleTestAll() {
     if (!groundTruthData || groundTruthData.length === 0) {
@@ -355,54 +440,88 @@ async function handleTestAll() {
         return;
     }
     
-    showLoading('Testing all images...');
+    showLoading('Testing all images with all available models...');
     
-    const results = [];
+    // Get all models, but only test truly available ones
+    const allModels = getAvailableModels(true);
+    const availableModels = allModels.filter(model => model.available === true);
+    
+    if (availableModels.length === 0) {
+        hideLoading();
+        alert('No models available for testing. Please ensure at least one model is available.');
+        return;
+    }
+    
+    const allModelResults = [];
     
     try {
-        for (let i = 0; i < groundTruthData.length; i++) {
-            const testData = groundTruthData[i];
-            const imagePath = `static/tests/${testData.file_name}`;
+        // Test each available model
+        for (const modelConfig of availableModels) {
+            const modelId = modelConfig.id;
+            console.log(`Testing model: ${modelConfig.name}...`);
             
-            console.log(`Processing ${testData.file_name}...`);
+            // Load model and dictionary if not already loaded
+            try {
+                if (!loadedModels[modelId]) {
+                    loadedModels[modelId] = await loadModel(modelId);
+                }
+                if (!dictionaries[modelId]) {
+                    dictionaries[modelId] = await loadCharacterDictionary(modelConfig.dictionaryPath);
+                }
+            } catch (error) {
+                console.warn(`Skipping model ${modelId} - not available:`, error);
+                continue;
+            }
             
-            // Load image
-            const img = await loadImageFromURL(imagePath);
+            // Clear previous statistics for this model
+            clearModelStatistics(modelId);
             
-            // Start timing
-            const startTime = performance.now();
+            const modelResults = [];
             
-            // Preprocess and recognize
-            const inputTensor = preprocessForRecognition(img);
-            const model = loadedModels[currentModelId];
-            const dictionary = dictionaries[currentModelId];
-            const ocrText = await recognizeText(model, inputTensor, dictionary);
+            // Test all images with this model
+            for (let i = 0; i < groundTruthData.length; i++) {
+                const testData = groundTruthData[i];
+                const imagePath = `static/tests/${testData.file_name}`;
+                
+                const img = await loadImageFromURL(imagePath);
+                
+                const startTime = performance.now();
+                const inputTensor = preprocessForRecognition(img);
+                const ocrText = await recognizeText(loadedModels[modelId], inputTensor, dictionaries[modelId]);
+                const endTime = performance.now();
+                const processingTime = (endTime - startTime).toFixed(2);
+                
+                const accuracy = calculateAccuracy(ocrText, testData.ground_truth_text);
+                
+                const result = {
+                    fileName: testData.file_name,
+                    ocrText: ocrText,
+                    groundTruth: testData.ground_truth_text,
+                    accuracy: accuracy,
+                    processingTime: processingTime
+                };
+                
+                modelResults.push(result);
+                recordTestResult(modelId, result);
+            }
             
-            // End timing
-            const endTime = performance.now();
-            const processingTime = (endTime - startTime).toFixed(2);
+            const stats = getModelStatistics(modelId);
+            allModelResults.push({
+                modelId: modelId,
+                modelName: modelConfig.name,
+                modelDescription: modelConfig.description,
+                stats: stats,
+                results: modelResults
+            });
             
-            // Calculate accuracy
-            const accuracy = calculateAccuracy(ocrText, testData.ground_truth_text);
-            
-            const result = {
-                fileName: testData.file_name,
-                ocrText: ocrText,
-                groundTruth: testData.ground_truth_text,
-                accuracy: accuracy,
-                processingTime: processingTime
-            };
-            
-            results.push(result);
-            
-            // Record statistics for current model
-            recordTestResult(currentModelId, result);
-            
-            console.log(`${testData.file_name}: ${accuracy.accuracy}% (${processingTime}ms)`);
+            console.log(`${modelConfig.name}: ${stats.avgAccuracy}% accuracy, ${stats.avgProcessingTime}ms avg time`);
         }
         
-        // Display results
-        displayTestResults(results);
+        // Sort models by accuracy (highest first)
+        allModelResults.sort((a, b) => parseFloat(b.stats.avgAccuracy) - parseFloat(a.stats.avgAccuracy));
+        
+        // Display results for all models
+        displayAllModelsTestResults(allModelResults);
         
         hideLoading();
         
@@ -492,6 +611,100 @@ function displayTestResults(results) {
             </div>
         </div>
     `;
+}
+
+/**
+ * Display test results for all models
+ * Shows results from all models sorted by accuracy (highest first)
+ */
+function displayAllModelsTestResults(allModelResults) {
+    const testResultsSection = document.getElementById('testResultsSection');
+    const testResultsDiv = document.getElementById('testResults');
+    const overallStatsDiv = document.getElementById('overallStats');
+    
+    // Show section
+    testResultsSection.style.display = 'block';
+    
+    let html = '';
+    
+    // Display results for each model (already sorted by accuracy)
+    for (let modelIndex = 0; modelIndex < allModelResults.length; modelIndex++) {
+        const modelData = allModelResults[modelIndex];
+        const rankBadge = modelIndex === 0 ? '🥇 ' : (modelIndex === 1 ? '🥈 ' : (modelIndex === 2 ? '🥉 ' : ''));
+        
+        html += `
+            <div class="model-test-section">
+                <div class="model-header">
+                    <h3>${rankBadge}${escapeHtml(modelData.modelName)}</h3>
+                    <p class="model-description">${escapeHtml(modelData.modelDescription)}</p>
+                    <div class="model-stats-summary">
+                        <span class="stat-badge accuracy-badge">
+                            📊 ${modelData.stats.avgAccuracy}% avg accuracy
+                        </span>
+                        <span class="stat-badge time-badge">
+                            ⏱️ ${modelData.stats.avgProcessingTime}ms avg time
+                        </span>
+                        <span class="stat-badge perfect-badge">
+                            ✨ ${modelData.stats.perfectMatches}/${modelData.stats.totalTests} perfect
+                        </span>
+                    </div>
+                </div>
+                <div class="test-results-grid">
+        `;
+        
+        // Display individual test results for this model
+        for (const result of modelData.results) {
+            const accuracyValue = parseFloat(result.accuracy.accuracy);
+            let statusClass = 'success';
+            if (accuracyValue < 50) statusClass = 'fail';
+            else if (accuracyValue < 90) statusClass = 'partial';
+            
+            html += `
+                <div class="test-result-item ${statusClass}">
+                    <h4>${escapeHtml(result.fileName)}</h4>
+                    <div class="test-accuracy">${result.accuracy.accuracy}%</div>
+                    <div class="test-time">⏱️ ${result.processingTime}ms</div>
+                    <div class="test-text">
+                        <strong>OCR:</strong> ${escapeHtml(result.ocrText)}<br>
+                        <strong>Truth:</strong> ${escapeHtml(result.groundTruth)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    testResultsDiv.innerHTML = html;
+    
+    // Display overall comparison summary
+    let summaryHtml = '<h3>📊 Overall Model Comparison</h3>';
+    summaryHtml += '<div class="model-comparison-summary">';
+    
+    for (let i = 0; i < allModelResults.length; i++) {
+        const modelData = allModelResults[i];
+        const rankClass = i === 0 ? 'rank-best' : '';
+        
+        summaryHtml += `
+            <div class="summary-item ${rankClass}">
+                <div class="summary-rank">${i + 1}</div>
+                <div class="summary-content">
+                    <strong>${escapeHtml(modelData.modelName)}</strong>
+                    <div class="summary-stats">
+                        <span>Accuracy: ${modelData.stats.avgAccuracy}%</span>
+                        <span>Time: ${modelData.stats.avgProcessingTime}ms</span>
+                        <span>Perfect: ${modelData.stats.perfectMatches}/${modelData.stats.totalTests}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    summaryHtml += '</div>';
+    overallStatsDiv.innerHTML = summaryHtml;
 }
 
 /**
