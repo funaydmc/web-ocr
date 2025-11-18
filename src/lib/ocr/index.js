@@ -87,10 +87,7 @@ export async function recognizeText(model, inputTensor, dictionary) {
         }
         
         // CTC decode
-        let text = ctcDecode(classIndices, dictionary);
-        
-        // Apply post-processing correction for common OCR errors
-        text = postProcessCorrections(text);
+        const text = ctcDecode(classIndices, dictionary);
         
         return text;
     } catch (error) {
@@ -132,40 +129,6 @@ function ctcDecode(classIndices, dictionary) {
     }
     
     return decodedChars.join('');
-}
-
-/**
- * Post-process OCR results to fix common character confusion errors
- * Uses context-aware corrections for visually similar Chinese characters
- * @param {string} text - Raw OCR text
- * @returns {string} Corrected text
- */
-function postProcessCorrections(text) {
-    // Common character confusions observed in the model
-    const corrections = [
-        // Based on failing test cases:
-        { pattern: /刷去(\d+)楼/g, replacement: '别去$1楼' },  // test_02: 刷 → 别
-        { pattern: /怎公/g, replacement: '怎么' },             // test_03: 公 → 么
-        { pattern: /什么?(\d)(\d+)楼[网啊]?/g, replacement: '什么$2楼啊' },  // test_05: remove extra digit
-        { pattern: /恐俱/g, replacement: '恐惧' },              // test_06: 俱 → 惧  
-        { pattern: /装上心头/g, replacement: '袭上心头' },       // test_06: 装 → 袭
-        
-        // Additional common confusions for robustness:
-        { pattern: /，/g, replacement: ', ' },                  // Normalize punctuation
-        { pattern: /\s+/g, replacement: ' ' },                  // Normalize spaces
-    ];
-    
-    let correctedText = text;
-    
-    // Apply each correction pattern
-    for (const { pattern, replacement } of corrections) {
-        correctedText = correctedText.replace(pattern, replacement);
-    }
-    
-    // Clean up extra spaces
-    correctedText = correctedText.trim();
-    
-    return correctedText;
 }
 
 /**

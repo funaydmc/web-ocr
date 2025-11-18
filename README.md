@@ -12,10 +12,14 @@ Hệ thống OCR (Optical Character Recognition) sử dụng PaddleOCR với ONN
 
 ## 📊 Kết quả Test
 
-- **Độ chính xác trung bình:** 100.00% 🎯
-- **Thời gian xử lý trung bình:** 75.07ms/ảnh
-- **Số ảnh khớp hoàn hảo:** 10/10 ảnh (100% accuracy)
-- **Tổng số ký tự đúng:** 114/114
+- **Độ chính xác trung bình:** 91.95%
+- **Thời gian xử lý trung bình:** 84.39ms/ảnh
+- **Số ảnh khớp hoàn hảo:** 6/10 ảnh (100% accuracy)
+- **Tổng số ký tự đúng:** 107/114
+
+### Cải tiến Preprocessing
+- Sử dụng `imageSmoothingQuality = 'high'` cho chất lượng nội suy tốt hơn
+- Giảm thiểu hiện tượng răng cưa (aliasing) khi resize ảnh
 
 ## 🚀 Cách sử dụng
 
@@ -97,24 +101,17 @@ Workflow file: `.github/workflows/deploy.yml`
 
 ## 🔍 Độ chính xác
 
-Hệ thống đạt độ chính xác hoàn hảo 100% trên bộ test:
-- test_01.png: 100% ✓ - "我们小区的楼房最高只有34层"
-- test_02.png: 100% ✓ - "别去35楼"
-- test_03.png: 100% ✓ - "陈杰, 这么晚了你怎么还不睡啊"
-- test_04.png: 100% ✓ - "他刚刚确实短暂的发了会疯"
-- test_05.png: 100% ✓ - "什么35楼啊"
-- test_06.png: 100% ✓ - "我听罢一股莫名的恐惧袭上心头"
-- test_07.png: 100% ✓ - "我站在哥哥面前一动都不敢动"
-- test_08.png: 100% ✓ - "喊完这句话以后"
-- test_09.png: 100% ✓ - "但电梯突然多出一个35楼的按钮"
-- test_10.png: 100% ✓ - "我站在哥哥面前一动都不敢动"
-
-### Cải tiến độ chính xác
-
-Độ chính xác được cải thiện từ 91.95% lên 100% thông qua:
-1. **Tối ưu preprocessing:** Sử dụng high-quality image smoothing
-2. **Post-processing thông minh:** Tự động sửa các lỗi nhận dạng phổ biến
-3. **Context-aware corrections:** Xử lý các ký tự dễ nhầm lẫn dựa trên ngữ cảnh
+Hệ thống đạt độ chính xác cao trên bộ test:
+- test_01.png: 100% - "我们小区的楼房最高只有34层"
+- test_02.png: 80% - "别去35楼" (OCR: "刷去35楼")
+- test_03.png: 80% - "陈杰, 这么晚了你怎么还不睡啊"
+- test_04.png: 100% - "他刚刚确实短暂的发了会疯"
+- test_05.png: 67% - "什么35楼啊" (OCR: "什235楼网")
+- test_06.png: 93% - "我听罢一股莫名的恐惧袭上心头"
+- test_07.png: 100% - "我站在哥哥面前一动都不敢动"
+- test_08.png: 100% - "喊完这句话以后"
+- test_09.png: 100% - "但电梯突然多出一个35楼的按钮"
+- test_10.png: 100% - "我站在哥哥面前一动都不敢动"
 
 ## 📄 License
 
