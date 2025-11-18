@@ -13,6 +13,25 @@ Hệ thống OCR (Optical Character Recognition) sử dụng PaddleOCR với ONN
 - **Accuracy Comparison**: So sánh độ chính xác với ground truth ở mức ký tự
 - **Batch Testing**: Test hàng loạt với tất cả ảnh test
 
+## 📊 Các mô hình PaddleOCR có sẵn
+
+Hệ thống hỗ trợ nhiều phiên bản mô hình PaddleOCR với đặc điểm khác nhau:
+
+| Mô hình | Phiên bản | Kích thước | Tốc độ | Độ chính xác | Trạng thái |
+|---------|-----------|------------|---------|--------------|------------|
+| PaddleOCR v1 (Original) | 1.0 | 11 MB | Trung bình | 91.95% | ✅ Đang dùng |
+| PP-OCRv2 Mobile | 2.0 | 8.5 MB | Nhanh | ~92% | 📥 Có thể tải |
+| PP-OCRv2 Server | 2.0 | 94 MB | Chậm | ~95% | 📥 Có thể tải |
+| PP-OCRv3 | 3.0 | 12 MB | Nhanh | ~93% | 📥 Có thể tải |
+| PP-OCRv4 | 4.0 | 10 MB | Rất nhanh | ~94% | 📥 Có thể tải |
+
+### Chọn mô hình phù hợp
+
+- **PP-OCRv2 Mobile**: Phù hợp cho web/mobile, cần tốc độ và kích thước nhỏ
+- **PP-OCRv2 Server**: Khi cần độ chính xác cao nhất, không quan tâm kích thước
+- **PP-OCRv3**: Lựa chọn cân bằng tốt cho đa số trường hợp
+- **PP-OCRv4**: Phiên bản mới nhất với công nghệ tiên tiến nhất
+
 ## 📊 Kết quả Test
 
 ### PaddleOCR v1 (Current Model)
@@ -65,9 +84,33 @@ URL: `https://funaydmc.github.io/web-ocr/`
 3. **Test All**: Click "Test All Images" để test trên tất cả ảnh test
 4. **Compare Models**: Click "Compare All Models" để so sánh hiệu suất các mô hình
 
-### 4. Thêm mô hình mới
+### 4. Tải và triển khai thêm các mô hình PaddleOCR
 
-Xem hướng dẫn chi tiết tại [docs/ADDING_MODELS.md](docs/ADDING_MODELS.md)
+Hệ thống hỗ trợ nhiều phiên bản PaddleOCR models:
+
+**Các model có sẵn để tải:**
+- PP-OCRv2 Mobile (8.5MB) - Nhanh, nhẹ, phù hợp web/mobile
+- PP-OCRv2 Server (94MB) - Độ chính xác cao nhất
+- PP-OCRv3 (12MB) - Cân bằng tốc độ và độ chính xác
+- PP-OCRv4 (10MB) - Phiên bản mới nhất, hiệu suất tốt nhất
+
+**Cách tải models:**
+
+```bash
+# Cài đặt công cụ chuyển đổi
+pip install paddle2onnx requests tqdm
+
+# Tải tất cả models
+cd scripts
+python3 download_models.py
+
+# Hoặc tải model cụ thể
+python3 download_models.py v3 v4
+```
+
+Xem hướng dẫn chi tiết tại:
+- [Hướng dẫn triển khai models](docs/MODEL_DEPLOYMENT_GUIDE.md) - Hướng dẫn đầy đủ
+- [Thêm models mới](docs/ADDING_MODELS.md) - Hướng dẫn thêm model tùy chỉnh
 
 ## 📁 Cấu trúc thư mục
 

@@ -246,18 +246,43 @@ If you see "Paddle Lite WebAssembly is not available":
 
 4. Place in `static/lib/paddle-lite/` directory
 
+## Quick Download with Scripts
+
+For easier model deployment, use the provided download scripts:
+
+```bash
+# Using Python script (recommended)
+cd scripts
+python3 download_models.py v3 v4
+
+# Or using Bash script
+./download_models.sh v3
+```
+
+See [scripts/README.md](../scripts/README.md) for detailed usage instructions.
+
 ## Model Sources
 
 ### PaddleOCR Models
 
 Official models: https://github.com/PaddlePaddle/PaddleOCR
-- Chinese models: `ch_ppocr_mobile_v2.0`, `ch_ppocr_server_v2.0`
+- Chinese models: `ch_ppocr_mobile_v2.0`, `ch_ppocr_server_v2.0`, `ch_ppocr_v3`, `ch_ppocr_v4`
 - English models: `en_ppocr_mobile_v2.0`, `en_ppocr_server_v2.0`
 - Multilingual models: `ml_ppocr_mobile_v2.0`
+
+### Download URLs
+
+Pre-configured in the download scripts:
+- PP-OCRv2 Mobile: `https://paddleocr.bj.bcebos.com/PP-OCRv2/chinese/ch_PP-OCRv2_rec_infer.tar`
+- PP-OCRv2 Server: `https://paddleocr.bj.bcebos.com/PP-OCRv2/chinese/ch_PP-OCRv2_rec_server_infer.tar`
+- PP-OCRv3: `https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_rec_infer.tar`
+- PP-OCRv4: `https://paddleocr.bj.bcebos.com/PP-OCRv4/chinese/ch_PP-OCRv4_rec_infer.tar`
 
 ## References
 
 - [PaddleOCR GitHub](https://github.com/PaddlePaddle/PaddleOCR)
+- [PaddleOCR Model Deployment Guide](MODEL_DEPLOYMENT_GUIDE.md) - **Complete guide for downloading and deploying models**
+- [Download Scripts Documentation](../scripts/README.md) - **Step-by-step usage instructions**
 - [Paddle Lite](https://github.com/PaddlePaddle/Paddle-Lite)
 - [Paddle Lite Deployment Guide](https://github.com/PaddlePaddle/PaddleOCR/blob/main/deploy/lite/readme_en.md)
 - [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/)
