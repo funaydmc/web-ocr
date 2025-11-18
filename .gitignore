@@ -1,3 +1,13 @@
 node_modules/
 *.log
 .DS_Store
+
+# Model files (too large for git, download separately)
+static/models/rec_mobile_v2.onnx
+static/models/rec_server_v2.onnx
+static/models/rec_v3.onnx
+static/models/rec_v4.onnx
+static/models/*.nb
+
+# Temporary download files
+/tmp/paddleocr_downloads/
