@@ -62,11 +62,12 @@ export async function recognizeText(model, inputTensor, dictionary) {
         // Get output tensor
         const output = results[Object.keys(results)[0]];
         const outputData = output.data;
+        const outputShape = output.dims;
         
-        // Output shape: [1, 40, 6624]
-        const batchSize = 1;
-        const timeSteps = 40;
-        const numClasses = 6624;
+        // Output shape should be [1, 40, 6625] (1 batch, 40 time steps, 6625 classes including blank)
+        const batchSize = outputShape[0];
+        const timeSteps = outputShape[1];
+        const numClasses = outputShape[2];
         
         // Extract class indices using argmax
         const classIndices = [];
