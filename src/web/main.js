@@ -4,7 +4,7 @@
 
 import { preprocessForRecognition, drawImageOnCanvas } from '../lib/preprocess/index.js';
 import { loadCharacterDictionary, loadModel, loadModels, recognizeText, calculateAccuracy } from '../lib/ocr/index.js';
-import { getAvailableModels, getModelConfig, getDefaultModelId } from '../lib/ocr/models-config.js';
+import { getAvailableModels, getModelConfig, getDefaultModelId, getDefaultModelIds, isModelAvailable } from '../lib/ocr/models-config.js';
 import { recordTestResult, getModelStatistics, getAllModelStatistics, compareModels, clearModelStatistics } from '../lib/ocr/statistics.js';
 
 // Global state
@@ -63,14 +63,30 @@ async function init() {
  */
 function populateModelSelector() {
     const modelSelect = document.getElementById('modelSelect');
-    const availableModels = getAvailableModels();
+    const allModels = getAvailableModels(true); // Get all models, including unavailable
     
     modelSelect.innerHTML = '';
     
-    availableModels.forEach(model => {
+    allModels.forEach(model => {
         const option = document.createElement('option');
         option.value = model.id;
-        option.textContent = `${model.name} - ${model.description}`;
+        
+        // Add status indicator to model name
+        let statusLabel = '';
+        if (model.available === true) {
+            statusLabel = '✓ ';
+        } else {
+            statusLabel = '📥 ';
+        }
+        
+        option.textContent = `${statusLabel}${model.name} - ${model.description}`;
+        
+        // Disable option if model is not available
+        if (model.available !== true) {
+            option.disabled = false; // Still allow selection to show download message
+            option.title = 'This model needs to be downloaded first. See scripts/download_models.py';
+        }
+        
         modelSelect.appendChild(option);
     });
 }
@@ -87,6 +103,22 @@ async function loadCurrentModel() {
     }
     
     console.log(`Loading model: ${config.name}...`);
+    
+    // Check if model is marked as available
+    if (!isModelAvailable(modelId)) {
+        console.warn(`Model ${modelId} is not marked as available. Will attempt to load but may fail.`);
+        alert(`⚠️ Model "${config.name}" needs to be downloaded first.\n\nPlease run:\ncd scripts\npython3 download_models.py ${modelId.replace('paddleocr_', '')}\n\nThen update models-config.js to set available: true`);
+        // Fall back to default available model
+        const defaultId = getDefaultModelId();
+        if (defaultId !== modelId) {
+            console.log(`Falling back to default model: ${defaultId}`);
+            currentModelId = defaultId;
+            document.getElementById('modelSelect').value = currentModelId;
+            return await loadCurrentModel();
+        }
+        // If already on default model, throw error
+        throw new Error(`Default model ${modelId} is not available`);
+    }
     
     // Load dictionary if not already loaded
     if (!dictionaries[modelId]) {
@@ -473,7 +505,16 @@ async function handleCompareModels() {
     
     showLoading('Comparing all available models...');
     
-    const availableModels = getAvailableModels();
+    // Only get truly available models for comparison
+    const allModels = getAvailableModels(true);
+    const availableModels = allModels.filter(model => model.available === true);
+    
+    if (availableModels.length === 0) {
+        hideLoading();
+        alert('No models available for comparison. Please download additional models first.');
+        return;
+    }
+    
     const comparisonResults = [];
     
     try {

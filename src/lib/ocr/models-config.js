@@ -121,10 +121,14 @@ export const MODEL_CONFIGS = {
 
 /**
  * Get list of available models
+ * @param {boolean} includeUnavailable - Include models that need to be downloaded
  * @returns {Array} Array of model configurations
  */
-export function getAvailableModels() {
-    return Object.values(MODEL_CONFIGS).filter(model => model.available !== false);
+export function getAvailableModels(includeUnavailable = true) {
+    if (includeUnavailable) {
+        return Object.values(MODEL_CONFIGS);
+    }
+    return Object.values(MODEL_CONFIGS).filter(model => model.available === true);
 }
 
 /**
@@ -141,5 +145,26 @@ export function getModelConfig(modelId) {
  * @returns {string} Default model ID
  */
 export function getDefaultModelId() {
-    return 'paddleocr_v1';
+    // Return first available model, fallback to paddleocr_v1
+    const availableModels = Object.values(MODEL_CONFIGS).filter(model => model.available === true);
+    return availableModels.length > 0 ? availableModels[0].id : 'paddleocr_v1';
+}
+
+/**
+ * Get list of default models (pre-configured and recommended)
+ * @returns {Array} Array of default model IDs
+ */
+export function getDefaultModelIds() {
+    return ['paddleocr_v1', 'paddleocr_mobile_v2', 'paddleocr_v3', 'paddleocr_v4'];
+}
+
+/**
+ * Check if a model is truly available (model file exists)
+ * This is checked at runtime when loading
+ * @param {string} modelId - Model identifier
+ * @returns {boolean} Whether model is marked as available
+ */
+export function isModelAvailable(modelId) {
+    const config = MODEL_CONFIGS[modelId];
+    return config ? config.available === true : false;
 }
