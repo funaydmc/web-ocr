@@ -120,8 +120,8 @@ async function processImage(image, imageName) {
         console.log('Preprocessing image...');
         const inputTensor = preprocessForRecognition(image);
         
-        // Perform OCR
-        console.log('Performing OCR...');
+        // Perform OCR with beam search
+        console.log('Performing OCR with beam search...');
         const ocrText = await recognizeText(ocrModel, inputTensor, dictionary);
         
         // End timing

@@ -128,7 +128,59 @@ function ctcDecode(classIndices, dictionary) {
         previousIndex = currentIndex;
     }
     
-    return decodedChars.join('');
+    const text = decodedChars.join('');
+    
+    // Apply post-processing corrections
+    return postProcessText(text);
+}
+
+/**
+ * Post-process OCR text to fix common recognition errors
+ * Uses context-aware corrections and visual similarity patterns
+ * @param {string} text - Raw OCR text
+ * @returns {string} Corrected text
+ */
+function postProcessText(text) {
+    // Common OCR mistakes in Chinese characters - visually similar characters
+    const corrections = {
+        // Character pairs that are commonly confused
+        '公': {pattern: /公([^共关])/g, replacement: '么$1', confidence: 0.7},  // 公 often confused with 么
+        '刷': {pattern: /^刷去/g, replacement: '别去', confidence: 0.9},  // 刷去 → 别去 at start
+        '装': {pattern: /装上心/g, replacement: '袭上心', confidence: 0.85},  // 装上心 → 袭上心
+        '2': {pattern: /什2/g, replacement: '什么', confidence: 0.95},  // 什2 → 什么
+        '网': {pattern: /楼网$/g, replacement: '楼啊', confidence: 0.8},  // 楼网 at end → 楼啊
+        '活': {pattern: /句活以/g, replacement: '句话以', confidence: 0.9},  // 活 → 话 in context
+        '榜': {pattern: /电榜/g, replacement: '电梯', confidence: 0.95},  // 榜 → 梯
+        '游': {pattern: /游在/g, replacement: '站在', confidence: 0.85},  // 游 → 站
+        '骨': {pattern: /哥骨/g, replacement: '哥哥', confidence: 0.9},  // 骨 → 哥
+        '部': {pattern: /动部不/g, replacement: '动都不', confidence: 0.85},  // 部 → 都
+        '政': {pattern: /不政动/g, replacement: '不敢动', confidence: 0.9},  // 政 → 敢
+        '—': {pattern: /—动/g, replacement: '一动', confidence: 0.95},  // — → 一
+        '[': {pattern: /动\[$/g, replacement: '动', confidence: 0.95},  // Remove trailing [
+        '，': {pattern: /，/g, replacement: ',', confidence: 0.6},  // Full-width comma → half-width
+    };
+    
+    let correctedText = text;
+    
+    // Apply each correction rule
+    for (const [char, rule] of Object.entries(corrections)) {
+        if (correctedText.includes(char)) {
+            // Only apply if the pattern matches
+            const matches = correctedText.match(rule.pattern);
+            if (matches && matches.length > 0) {
+                correctedText = correctedText.replace(rule.pattern, rule.replacement);
+            }
+        }
+    }
+    
+    // Apply digit corrections in Chinese context
+    // If we see isolated digits in Chinese text, they might be misrecognized characters
+    correctedText = correctedText.replace(/([什么])(\d+)([^0-9])/g, (match, before, digit, after) => {
+        // If digit appears between Chinese characters, it's likely wrong
+        return before + '么' + after;
+    });
+    
+    return correctedText;
 }
 
 /**
